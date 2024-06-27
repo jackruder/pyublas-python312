@@ -1,6 +1,7 @@
 import setuptools  # noqa
 from setuptools import Extension
 import sys
+import os
 
 
 def count_down_delay(delay):
@@ -41,14 +42,21 @@ class NumpyExtension(Extension):
         del self.include_dirs  # restore overwritten property
 
     def get_numpy_incpath(self):
-        from importlib import find_module
         # avoid actually importing numpy, it screws up distutils
-        file, pathname, descr = find_module("numpy")
-        from os.path import join
-        return join(pathname, "core", "include")
+        from importlib.util import find_spec
+        spec = find_spec("numpy")
+        print(spec)
+        if not spec is None:
+            if not spec.submodule_search_locations is None:
+                loc = spec.submodule_search_locations
+                potential_locs = [os.path.join(l,"core/include/") for l in loc]
+                loc += [p for p in potential_locs if os.path.exists(p)]
+                return(loc)
+                
+        sys.exit("Sorry, could not find numpy")
 
     def get_additional_include_dirs(self):
-        return [self.get_numpy_incpath()]
+        return self.get_numpy_incpath()
 
     def get_include_dirs(self):
         return self._include_dirs + self.get_additional_include_dirs()
